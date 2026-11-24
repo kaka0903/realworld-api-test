@@ -29,6 +29,9 @@ realworld-api-test/
 ├── known_issues.py        已知问题登记表
 ├── data/
 │   └── cases.csv          101 条用例（从 Excel 用例表导出）
+├── docs/
+│   ├── 缺陷报告.md         6 份正式缺陷 + 3 组系统性偏差
+│   └── 执行报告.md         执行过程与失败归因
 ├── tests/
 │   ├── test_api_cases.py  数据驱动主套件
 │   ├── test_destructive.py 破坏性用例（独立数据）
