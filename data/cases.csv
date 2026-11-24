@@ -1,0 +1,146 @@
+﻿用例编号,模块,接口编号,用例标题,类型,优先级,方法,路径,请求头,请求体,预期状态码,预期响应,前置条件,实际状态码,实际响应,执行结果,缺陷编号,备注
+API-01-01,认证,API-01,正常注册：三个字段均合法,正向,P0,POST,/api/users,Content-Type: application/json,"{""user"":{""username"":""tester01"",""email"":""tester01@test.com"",""password"":""12345678""}}",201,返回 user 对象，含 token/username/email，不含 password,无,,,,,基线用例。后续登录、改资料的前置都靠它
+API-01-02,认证,API-01,缺 username 字段,逆向,P1,POST,/api/users,Content-Type: application/json,"{""user"":{""email"":""t02@test.com"",""password"":""12345678""}}",422,"{""errors"":{""username"":[""can't be blank""]}}",无,,,,,必填校验：三个必填字段各测一条
+API-01-03,认证,API-01,缺 email 字段,逆向,P1,POST,/api/users,Content-Type: application/json,"{""user"":{""username"":""tester03"",""password"":""12345678""}}",422,"{""errors"":{""email"":[""can't be blank""]}}",无,,,,,必填校验
+API-01-04,认证,API-01,缺 password 字段,逆向,P1,POST,/api/users,Content-Type: application/json,"{""user"":{""username"":""tester04"",""email"":""t04@test.com""}}",422,"{""errors"":{""password"":[""can't be blank""]}}",无,,,,,必填校验。注意 JSON 不能有尾逗号
+API-01-05,认证,API-01,email 格式非法：abc,逆向,P1,POST,/api/users,Content-Type: application/json,"{""user"":{""username"":""tester05"",""email"":""abc"",""password"":""12345678""}}",422,errors.email 提示邮箱格式不正确,无,,,,,格式校验：无 @ 的情况
+API-01-06,认证,API-01,email 格式非法：a@,逆向,P1,POST,/api/users,Content-Type: application/json,"{""user"":{""username"":""tester06"",""email"":""a@"",""password"":""12345678""}}",422,errors.email 提示邮箱格式不正确,无,,,,,格式校验：有 @ 但缺域名
+API-01-07,认证,API-01,password 只有 7 位（边界下）,边界,P1,POST,/api/users,Content-Type: application/json,"{""user"":{""username"":""tester07"",""email"":""t07@test.com"",""password"":""1234567""}}",422,errors.password 提示长度不足,无,,,,,边界值：规范要求至少 8 位
+API-01-08,认证,API-01,password 正好 8 位（边界上）,边界,P1,POST,/api/users,Content-Type: application/json,"{""user"":{""username"":""tester08"",""email"":""t08@test.com"",""password"":""12345678""}}",201,注册成功，返回 token,无,,,,,边界值：最小合法长度应通过
+API-01-09,认证,API-01,用户名已存在,逆向,P1,POST,/api/users,Content-Type: application/json,"{""user"":{""username"":""tester01"",""email"":""t09@test.com"",""password"":""12345678""}}",409,"{""errors"":{""username"":[""has already been taken""]}}",API-01-01 已注册 tester01,,,,,唯一性约束。409 是最容易漏测的分支
+API-01-10,认证,API-01,邮箱已存在,逆向,P1,POST,/api/users,Content-Type: application/json,"{""user"":{""username"":""tester10"",""email"":""tester01@test.com"",""password"":""12345678""}}",409,"{""errors"":{""email"":[""has already been taken""]}}",API-01-01 已注册该邮箱,,,,,唯一性约束：邮箱维度
+API-01-11,认证,API-01,username 为空字符串,逆向,P1,POST,/api/users,Content-Type: application/json,"{""user"":{""username"":"""",""email"":""t11@test.com"",""password"":""12345678""}}",422,errors.username 提示不能为空,无,,,,,空串不等于缺字段，两者都要测
+API-01-12,认证,API-01,password 为空字符串,逆向,P1,POST,/api/users,Content-Type: application/json,"{""user"":{""username"":""tester12"",""email"":""t12@test.com"",""password"":""""}}",422,errors.password 提示不能为空,无,,,,,空串校验
+API-01-13,认证,API-01,email 大小写不同是否视为同一邮箱,逆向,P2,POST,/api/users,Content-Type: application/json,"{""user"":{""username"":""tester13"",""email"":""TESTER01@TEST.COM"",""password"":""12345678""}}",409 或 201,409 说明邮箱不区分大小写；201 说明区分。先记录实际结果再固化预期,API-01-01 已注册 tester01@test.com,,,,,规范未明确的探索性用例
+API-02-01,认证,API-02,正常登录，返回 token,正向,P0,POST,/api/users/login,Content-Type: application/json,"{""user"":{""email"":""tester01@test.com"",""password"":""12345678""}}",200,返回 user 对象，token 为非空字符串,API-01-01 已注册,,,,,基线用例。token 留给后续接口用
+API-02-02,认证,API-02,密码错误,逆向,P1,POST,/api/users/login,Content-Type: application/json,"{""user"":{""email"":""tester01@test.com"",""password"":""wrongpass""}}",401,errors.body 提示 email or password is invalid,API-01-01 已注册,,,,,认证失败。提示语不能泄露是密码错还是用户不存在
+API-02-03,认证,API-02,用户不存在,逆向,P1,POST,/api/users/login,Content-Type: application/json,"{""user"":{""email"":""nobody@test.com"",""password"":""12345678""}}",401,与密码错误返回相同的提示（防用户名枚举）,无,,,,,安全性：两种失败应返回一致信息
+API-02-04,认证,API-02,email 格式非法,逆向,P1,POST,/api/users/login,Content-Type: application/json,"{""user"":{""email"":""abc"",""password"":""12345678""}}",422,errors.email 提示格式不正确,无,,,,,登录接口同样要做格式校验
+API-02-05,认证,API-02,缺 password 字段,逆向,P1,POST,/api/users/login,Content-Type: application/json,"{""user"":{""email"":""tester01@test.com""}}",422,"{""errors"":{""password"":[""can't be blank""]}}",无,,,,,必填校验
+API-02-06,认证,API-02,缺 email 字段,逆向,P1,POST,/api/users/login,Content-Type: application/json,"{""user"":{""password"":""12345678""}}",422,"{""errors"":{""email"":[""can't be blank""]}}",无,,,,,必填校验
+API-03-01,认证,API-03,带有效 token 获取当前用户,正向,P0,GET,/api/user,"Content-Type: application/json
+Authorization: Token {token}",无,200,返回 username=tester01、email、token,API-02-01 已取得 token,,,,,鉴权成功路径
+API-03-02,认证,API-03,不带 Authorization 头,逆向,P1,GET,/api/user,无,无,401,errors 提示未认证,无,,,,,鉴权缺失
+API-03-03,认证,API-03,token 为乱码,逆向,P1,GET,/api/user,Authorization: Token abc123,无,401,errors 提示 token 无效,无,,,,,鉴权失败
+API-03-04,认证,API-03,token 缺少 Token 前缀,逆向,P1,GET,/api/user,Authorization: {token},无,401 或 200,严格实现应 401；返回 200 说明校验过宽,API-02-01 已取得 token,,,,,你在项目二里发现过同类缺陷，重点验证
+API-04-01,认证,API-04,更新邮箱成功,正向,P0,PUT,/api/user,"Content-Type: application/json
+Authorization: Token {token}","{""user"":{""email"":""tester01_new@test.com""}}",200,返回的 email 为新值,API-02-01 已取得 token,,,,,更新路径基线
+API-04-02,认证,API-04,改密码后用新密码能登录,正向,P0,PUT,/api/user,"Content-Type: application/json
+Authorization: Token {token}","{""user"":{""password"":""newpass888""}}",200,返回 user 对象,API-02-01 已取得 token,,,,,闭环用例：改完必须用 API-02 验证新密码生效、旧密码失效
+API-04-03,认证,API-04,更新为已存在的邮箱,逆向,P1,PUT,/api/user,"Content-Type: application/json
+Authorization: Token {token}","{""user"":{""email"":""tester01@test.com""}}",409,"{""errors"":{""email"":[""has already been taken""]}}",存在另一个用户占用该邮箱,,,,,唯一性约束在更新时同样要校验
+API-04-04,认证,API-04,不带 token 更新,逆向,P1,PUT,/api/user,Content-Type: application/json,无,401,errors 提示未认证,无,,,,,鉴权缺失
+API-04-05,认证,API-04,更新 email 为非法格式,逆向,P1,PUT,/api/user,"Content-Type: application/json
+Authorization: Token {token}","{""user"":{""email"":""not-an-email""}}",422,errors.email 提示格式不正确,API-02-01 已取得 token,,,,,更新时的格式校验
+API-04-06,认证,API-04,更新 username 成功,正向,P1,PUT,/api/user,"Content-Type: application/json
+Authorization: Token {token}","{""user"":{""username"":""tester01_renamed""}}",200,返回的 username 为新值,API-02-01 已取得 token,,,,,可更新字段覆盖
+API-05-01,资料,API-05,查看已存在用户的资料,正向,P0,GET,/api/profiles/tester01,无,无,200,返回 profile：username=tester01、following=false、image 可为 null,API-01-01 已注册,,,,,基线用例
+API-05-02,资料,API-05,查看不存在的用户,逆向,P1,GET,/api/profiles/nobody,无,无,404,errors 提示用户不存在,无,,,,,路径参数无效
+API-05-03,资料,API-05,匿名查看资料（不带 token）,正向,P1,GET,/api/profiles/tester01,无,无,200,与 API-05-01 结果一致，following 恒为 false,API-01-01 已注册,,,,,可选认证：匿名也能看
+API-05-04,资料,API-05,带无效 token 查看资料,逆向,P1,GET,/api/profiles/tester01,Authorization: Token abc123,无,401,errors 提示 token 无效,无,,,,,传错 token 即使接口可选认证也应拒绝
+API-06-01,资料,API-06,关注他人成功,正向,P0,POST,/api/profiles/tester02/follow,"Content-Type: application/json
+Authorization: Token {token}",无,200,profile.following=true,API-01-01 与 tester02 均已注册,,,,,基线用例
+API-06-02,资料,API-06,关注不存在的用户,逆向,P1,POST,/api/profiles/nobody/follow,"Content-Type: application/json
+Authorization: Token {token}",无,404,errors 提示用户不存在,已登录,,,,,路径参数无效
+API-06-03,资料,API-06,重复关注同一人（幂等）,逆向,P1,POST,/api/profiles/tester02/follow,"Content-Type: application/json
+Authorization: Token {token}",无,200,仍返回 following=true，不报错,API-06-01 已关注,,,,,重复操作应幂等
+API-06-04,资料,API-06,关注自己,逆向,P2,POST,/api/profiles/tester01/follow,"Content-Type: application/json
+Authorization: Token {token}",无,200 或 422,200 说明允许自关注；422 说明禁止。记录实际结果,已登录,,,,,规范未明确，探索性
+API-06-05,资料,API-06,不带 token 关注,逆向,P1,POST,/api/profiles/tester02/follow,Content-Type: application/json,无,401,errors 提示未认证,无,,,,,鉴权缺失
+API-07-01,资料,API-07,取消关注成功,正向,P0,DELETE,/api/profiles/tester02/follow,"Content-Type: application/json
+Authorization: Token {token}",无,200,profile.following=false,API-06-01 已关注,,,,,基线用例
+API-07-02,资料,API-07,取消未关注的用户,逆向,P2,DELETE,/api/profiles/tester03/follow,"Content-Type: application/json
+Authorization: Token {token}",无,200 或 404,幂等实现返回 200；严格实现可能 404。记录实际结果,已登录且未关注 tester03,,,,,重复操作行为
+API-07-03,资料,API-07,不带 token 取消关注,逆向,P1,DELETE,/api/profiles/tester02/follow,Content-Type: application/json,无,401,errors 提示未认证,无,,,,,鉴权缺失
+API-08-01,文章,API-08,默认分页获取文章列表,正向,P0,GET,/api/articles,无,无,200,返回 articles 数组与 articlesCount，默认 20 条,至少存在 1 篇文章,,,,,基线用例
+API-08-02,文章,API-08,limit=0,边界,P2,GET,/api/articles?limit=0,无,无,200 或 422,200 返回空列表；422 表示参数非法。记录实际结果,无,,,,,边界值：下限
+API-08-03,文章,API-08,limit=-1,边界,P2,GET,/api/articles?limit=-1,无,无,422,errors 提示参数非法,无,,,,,边界值：负数
+API-08-04,文章,API-08,limit=999,边界,P1,GET,/api/articles?limit=999,无,无,200,返回条数不超过实际总数,无,,,,,边界值：上限
+API-08-05,文章,API-08,offset 超过总数,边界,P1,GET,/api/articles?offset=9999,无,无,200,articles 为空数组，articlesCount 仍为总数,无,,,,,分页越界不应报错
+API-08-06,文章,API-08,按 tag 筛选（存在的标签）,正向,P1,GET,/api/articles?tag=docker,无,无,200,每条结果的 tagList 都包含 docker,存在带 docker 标签的文章,,,,,筛选正确性
+API-08-07,文章,API-08,按 tag 筛选（不存在的标签）,逆向,P1,GET,/api/articles?tag=notexist,无,无,200,articles 为空数组，不是 404,无,,,,,空结果不等于错误
+API-08-08,文章,API-08,按 author 筛选,正向,P1,GET,/api/articles?author=tester01,无,无,200,每条结果的 author.username 都是 tester01,tester01 已发布文章,,,,,筛选正确性
+API-08-09,文章,API-08,tag 与 author 组合筛选,正向,P2,GET,/api/articles?tag=docker&author=tester01,无,无,200,结果同时满足两个条件,存在符合条件的数据,,,,,多条件组合
+API-08-10,文章,API-08,带无效 token 获取列表,逆向,P1,GET,/api/articles,Authorization: Token abc123,无,401,errors 提示 token 无效,无,,,,,可选认证下的失败路径
+API-09-01,文章,API-09,正常创建文章,正向,P0,POST,/api/articles,"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""title"":""测试文章一"",""description"":""这是描述"",""body"":""这是正文内容"",""tagList"":[""test"",""api""]}}",201,返回 article，含 slug、title、tagList、author,已登录,,,,,基线用例。slug 供后续接口使用
+API-09-02,文章,API-09,缺 title 字段,逆向,P1,POST,/api/articles,"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""description"":""d"",""body"":""b""}}",422,"{""errors"":{""title"":[""can't be blank""]}}",已登录,,,,,必填校验
+API-09-03,文章,API-09,缺 body 字段,逆向,P1,POST,/api/articles,"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""title"":""t"",""description"":""d""}}",422,"{""errors"":{""body"":[""can't be blank""]}}",已登录,,,,,必填校验
+API-09-04,文章,API-09,title 为空字符串,逆向,P1,POST,/api/articles,"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""title"":"""",""description"":""d"",""body"":""b"",""tagList"":[]}}",422,errors.title 提示不能为空,已登录,,,,,空串校验
+API-09-05,文章,API-09,标题重复,逆向,P1,POST,/api/articles,"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""title"":""测试文章一"",""description"":""另一个描述"",""body"":""另一段正文"",""tagList"":[]}}",409,errors 提示标题或 slug 已存在,API-09-01 已创建同名文章,,,,,唯一性约束。规范里 POST 有 409
+API-09-06,文章,API-09,tagList 为空数组,边界,P1,POST,/api/articles,"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""title"":""无标签文章"",""description"":""描述"",""body"":""正文"",""tagList"":[]}}",201,返回 tagList 为空数组,已登录,,,,,可选字段
+API-09-07,文章,API-09,不带 token 创建,逆向,P1,POST,/api/articles,Content-Type: application/json,"{""article"":{""title"":""未授权文章"",""description"":""d"",""body"":""b"",""tagList"":[]}}",401,errors 提示未认证,无,,,,,鉴权缺失
+API-09-08,文章,API-09,token 为乱码创建,逆向,P1,POST,/api/articles,"Content-Type: application/json
+Authorization: Token abc123","{""article"":{""title"":""乱码token文章"",""description"":""d"",""body"":""b"",""tagList"":[]}}",401,errors 提示 token 无效,无,,,,,鉴权失败
+API-09-09,文章,API-09,创建后能通过详情接口查到,正向,P0,POST,/api/articles,"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""title"":""闭环验证文章"",""description"":""描述"",""body"":""正文"",""tagList"":[""test""]}}",201,先创建成功，再用返回的 slug 调 API-11 应返回 200 且内容一致,已登录,,,,,闭环用例：写入后必须能读出来
+API-09-10,文章,API-09,title 超长（300 字符）,边界,P2,POST,/api/articles,"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""title"":""AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"",""description"":""描述"",""body"":""正文"",""tagList"":[]}}",422 或 201,记录实际结果；若允许需确认数据库字段长度,已登录,,,,,边界值：上限未知，探索
+API-10-01,文章,API-10,获取关注者的文章流,正向,P0,GET,/api/articles/feed,"Content-Type: application/json
+Authorization: Token {token}",无,200,articles 中只包含已关注作者的文章,已关注至少 1 人且对方有文章,,,,,基线用例
+API-10-02,文章,API-10,未关注任何人时的 feed,逆向,P1,GET,/api/articles/feed,"Content-Type: application/json
+Authorization: Token {token}",无,200,articles 为空数组,新用户，未关注任何人,,,,,空结果不是错误
+API-10-03,文章,API-10,不带 token 获取 feed,逆向,P1,GET,/api/articles/feed,Content-Type: application/json,无,401,errors 提示未认证,无,,,,,鉴权缺失
+API-10-04,文章,API-10,关注后对方文章出现在 feed,正向,P1,GET,/api/articles/feed,"Content-Type: application/json
+Authorization: Token {token}",无,200,tester02 的文章出现在列表中,已关注 tester02 且其有文章,,,,,闭环用例
+API-11-01,文章,API-11,获取存在的文章详情,正向,P0,GET,/api/articles/{slug},无,无,200,返回 slug/title/body/author/tagList/createdAt,API-09-01 已创建,,,,,基线用例
+API-11-02,文章,API-11,获取不存在的文章,逆向,P1,GET,/api/articles/not-exist-slug,无,无,404,errors 提示文章不存在,无,,,,,路径参数无效
+API-11-03,文章,API-11,匿名获取文章详情,正向,P1,GET,/api/articles/{slug},无,无,200,与带 token 结果一致，favorited 恒为 false,API-09-01 已创建,,,,,可选认证
+API-11-04,文章,API-11,详情字段完整性校验,正向,P1,GET,/api/articles/{slug},无,无,200,author 含 username/bio/image/following；tagList 为数组,API-09-01 已创建,,,,,不只查状态码，要校验结构
+API-12-01,文章,API-12,更新自己的文章,正向,P0,PUT,/api/articles/{slug},"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""title"":""测试文章一（已更新）""}}",200,返回的 title 为新值,API-09-01 创建的作者本人,,,,,基线用例
+API-12-02,文章,API-12,更新别人的文章,逆向,P0,PUT,/api/articles/{slug},"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""title"":""越权修改""}}",403,errors 提示无权限,使用 tester02 的 token,,,,,越权校验。403 与 404 的区别反映实现策略
+API-12-03,文章,API-12,更新不存在的文章,逆向,P1,PUT,/api/articles/not-exist-slug,"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""title"":""x""}}",404,errors 提示文章不存在,已登录,,,,,路径参数无效
+API-12-04,文章,API-12,不带 token 更新,逆向,P1,PUT,/api/articles/{slug},Content-Type: application/json,"{""article"":{""title"":""x""}}",401,errors 提示未认证,无,,,,,鉴权缺失
+API-12-05,文章,API-12,title 更新为空串,逆向,P1,PUT,/api/articles/{slug},"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""title"":""""}}",422,errors.title 提示不能为空,作者本人 token,,,,,更新时同样要校验
+API-12-06,文章,API-12,只更新 description，其他字段不变,正向,P1,PUT,/api/articles/{slug},"Content-Type: application/json
+Authorization: Token {token}","{""article"":{""description"":""新描述""}}",200,description 变化，title 与 body 保持原值,作者本人 token,,,,,部分更新不应清空未传字段
+API-13-01,文章,API-13,删除自己的文章,正向,P0,DELETE,/api/articles/{slug},"Content-Type: application/json
+Authorization: Token {token}",无,204,无响应体，Content-Length 为 0,作者本人 token,,,,,成功码是 204 不是 200
+API-13-02,文章,API-13,删除别人的文章,逆向,P0,DELETE,/api/articles/{slug},"Content-Type: application/json
+Authorization: Token {token}",无,403,errors 提示无权限,使用他人 token,,,,,越权校验
+API-13-03,文章,API-13,删除不存在的文章,逆向,P1,DELETE,/api/articles/not-exist-slug,"Content-Type: application/json
+Authorization: Token {token}",无,404,errors 提示文章不存在,已登录,,,,,路径参数无效
+API-13-04,文章,API-13,重复删除同一篇,逆向,P1,DELETE,/api/articles/{slug},"Content-Type: application/json
+Authorization: Token {token}",无,404,第二次删除返回 404,已执行过 API-13-01,,,,,非幂等操作的结果
+API-13-05,文章,API-13,删除后详情接口返回 404,正向,P1,GET,/api/articles/{slug},无,无,404,证明删除真的生效,已执行过 API-13-01,,,,,闭环用例：删除后读不到
+API-14-01,评论,API-14,获取有评论的文章的评论列表,正向,P0,GET,/api/articles/{slug}/comments,无,无,200,返回 comments 数组，含 id/body/author/createdAt,该文章已有评论,,,,,基线用例
+API-14-02,评论,API-14,没有评论的文章,逆向,P1,GET,/api/articles/{slug}/comments,无,无,200,comments 为空数组,该文章无评论,,,,,空结果不是错误
+API-14-03,评论,API-14,文章不存在时获取评论,逆向,P1,GET,/api/articles/not-exist-slug/comments,无,无,404,errors 提示文章不存在,无,,,,,路径参数无效
+API-15-01,评论,API-15,正常发表评论,正向,P0,POST,/api/articles/{slug}/comments,"Content-Type: application/json
+Authorization: Token {token}","{""comment"":{""body"":""这是一条测试评论""}}",201,返回 comment，含 id/body/author,已登录且文章存在,,,,,基线用例。id 供删除用例使用
+API-15-02,评论,API-15,评论内容为空,逆向,P1,POST,/api/articles/{slug}/comments,"Content-Type: application/json
+Authorization: Token {token}","{""comment"":{""body"":""""}}",422,"{""errors"":{""body"":[""can't be blank""]}}",已登录,,,,,空串校验
+API-15-03,评论,API-15,给不存在的文章评论,逆向,P1,POST,/api/articles/not-exist-slug/comments,"Content-Type: application/json
+Authorization: Token {token}","{""comment"":{""body"":""测试""}}",404,errors 提示文章不存在,已登录,,,,,路径参数无效
+API-15-04,评论,API-15,不带 token 评论,逆向,P1,POST,/api/articles/{slug}/comments,Content-Type: application/json,"{""comment"":{""body"":""测试""}}",401,errors 提示未认证,无,,,,,鉴权缺失
+API-16-01,评论,API-16,删除自己的评论,正向,P0,DELETE,/api/articles/{slug}/comments/{id},"Content-Type: application/json
+Authorization: Token {token}",无,204,无响应体,API-15-01 创建的评论本人,,,,,成功码 204
+API-16-02,评论,API-16,删除别人的评论,逆向,P0,DELETE,/api/articles/{slug}/comments/{id},"Content-Type: application/json
+Authorization: Token {token}",无,403,errors 提示无权限,使用他人 token,,,,,越权校验
+API-16-03,评论,API-16,评论 id 不存在,逆向,P1,DELETE,/api/articles/{slug}/comments/999999,"Content-Type: application/json
+Authorization: Token {token}",无,404,errors 提示评论不存在,已登录,,,,,路径参数无效
+API-16-04,评论,API-16,不带 token 删除评论,逆向,P1,DELETE,/api/articles/{slug}/comments/{id},Content-Type: application/json,无,401,errors 提示未认证,无,,,,,鉴权缺失
+API-17-01,收藏,API-17,收藏文章成功,正向,P0,POST,/api/articles/{slug}/favorite,"Content-Type: application/json
+Authorization: Token {token}",无,200,article.favorited=true，favoritesCount 较收藏前加 1,已登录,,,,,基线用例
+API-17-02,收藏,API-17,重复收藏同一篇（幂等）,逆向,P1,POST,/api/articles/{slug}/favorite,"Content-Type: application/json
+Authorization: Token {token}",无,200,favorited 仍为 true，favoritesCount 不重复增加,API-17-01 已收藏,,,,,重点：计数是否被重复累加
+API-17-03,收藏,API-17,收藏不存在的文章,逆向,P1,POST,/api/articles/not-exist-slug/favorite,"Content-Type: application/json
+Authorization: Token {token}",无,404,errors 提示文章不存在,已登录,,,,,路径参数无效
+API-17-04,收藏,API-17,不带 token 收藏,逆向,P1,POST,/api/articles/{slug}/favorite,Content-Type: application/json,无,401,errors 提示未认证,无,,,,,鉴权缺失
+API-18-01,收藏,API-18,取消收藏成功,正向,P0,DELETE,/api/articles/{slug}/favorite,"Content-Type: application/json
+Authorization: Token {token}",无,200,favorited=false，favoritesCount 减 1,API-17-01 已收藏,,,,,基线用例
+API-18-02,收藏,API-18,取消未收藏的文章,逆向,P2,DELETE,/api/articles/{slug}/favorite,"Content-Type: application/json
+Authorization: Token {token}",无,200,favorited 仍为 false，计数不为负,已登录且未收藏,,,,,重复操作行为
+API-18-03,收藏,API-18,不带 token 取消收藏,逆向,P1,DELETE,/api/articles/{slug}/favorite,Content-Type: application/json,无,401,errors 提示未认证,无,,,,,鉴权缺失
+API-19-01,标签,API-19,获取所有标签,正向,P0,GET,/api/tags,无,无,200,返回 tags 字符串数组,无,,,,,基线用例
+API-19-02,标签,API-19,发布带新标签的文章后标签出现,正向,P1,GET,/api/tags,无,无,200,tags 中包含新发布的标签,API-09-01 已发布带 test 标签的文章,,,,,闭环用例
+API-19-03,标签,API-19,空库时返回空数组,逆向,P2,GET,/api/tags,无,无,200,tags 为 []，不是 404,全新环境无任何文章,,,,,空结果不是错误
